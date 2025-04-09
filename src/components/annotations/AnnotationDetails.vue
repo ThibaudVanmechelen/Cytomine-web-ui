@@ -618,28 +618,19 @@ export default {
         const annotationId = this.annotation.id;
 
         // full path should be https://research.cytomine.be/api/annotation/{annotationId}/sam
-        const response = await fetch(`/api/annotation/${annotationId}/sam`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              userId: this.currentUser.id
-            })
-          });
+        const response = await fetch(`/api/annotation/${annotationId}/sam`, { method: "POST" });
+        const result = await response.json();
 
-          const result = await response.json();
-
-          if (!response.ok) {
-            throw new Error(result.message || 'SAM request failed');
-          }
-
-          this.$notify({ type: 'success', text: 'Successful SAM Processing !' });
-
-        } catch (error) {
-          console.error(error);
-          this.$notify({ type: 'error', text: 'Error in SAM Processing.' });
+        if (!response.ok) {
+          throw new Error(result.message || 'SAM request failed');
         }
+
+        this.$notify({ type: 'success', text: 'Successful SAM Processing !' });
+
+      } catch (error) {
+        console.error(error);
+        this.$notify({ type: 'error', text: 'Error in SAM Processing.' });
+      }
     }
   },
   async created() {
