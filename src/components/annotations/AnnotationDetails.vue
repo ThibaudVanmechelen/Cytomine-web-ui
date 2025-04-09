@@ -267,6 +267,12 @@
       {{ $t('button-center-view-on-annot') }}
     </a>
 
+    <button v-if="!isPoint" class="button is-link is-small is-fullwidth"
+      @click="sendSamRequest"
+    >
+        {{ $t('button-sam-request') }}
+    </button>
+
     <div class="level">
       <a @click="openCrop(annotation)" class="level-item button is-small">
         {{ $t('button-view-crop') }}
@@ -605,6 +611,35 @@ export default {
     },
     addProp(prop) {
       this.properties.push(prop);
+    },
+
+    async sendSamRequest() {
+      try {
+        const annotationId = this.annotation.id;
+
+        // full path should be https://research.cytomine.be/api/annotation/{annotationId}/sam
+        const response = await fetch(`/api/annotation/${annotationId}/sam`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              userId: this.currentUser.id
+            })
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.message || 'SAM request failed');
+          }
+
+          this.$notify({ type: 'success', text: 'Successful SAM Processing !' });
+
+        } catch (error) {
+          console.error(error);
+          this.$notify({ type: 'error', text: 'Error in SAM Processing.' });
+        }
     }
   },
   async created() {
