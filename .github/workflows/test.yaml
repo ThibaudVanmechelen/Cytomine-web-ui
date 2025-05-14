@@ -4,7 +4,10 @@ on:
   pull_request:
     branches:
       - main-ce
-      - production
+    paths:
+      - "src/**/*.js"
+      - "src/**/*.vue"
+      - "tests/**/*.js"
 
 jobs:
   unit-test:
@@ -12,10 +15,10 @@ jobs:
 
     steps:
       - name: Set up the repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up NodeJS
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ vars.NODE_VERSION }}
 

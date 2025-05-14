@@ -15,20 +15,16 @@
 */
 
 export default {
-  CYTOMINE_CORE_HOST: 'https://localhost-core',
-  CYTOMINE_UPLOAD_HOST: 'https://localhost-upload',
   STOP_PREVIEW_KEYWORD: 'STOP_PREVIEW',
   DIGITAL_ZOOM_INCREMENT: 4,
   // features switches
-  ALGORITHMS_ENABLED: false,
+  APPENGINE_ENABLED: false,
   PRELOADED_SLICES: 50,
   MAX_MERGEABLE_CHANNELS: 36,
   // Refresh intervals (expressed in milliseconds)
   VIEWER_ANNOTATIONS_REFRESH_INTERVAL: 10000,
   MEMBERS_ACTIVITY_REFRESH_INTERVAL: 30000,
   PING_INTERVAL: 20000, // should be lower than 30 seconds (otherwise, not counted in backend)
-  JOB_DETAILS_REFRESH_INTERVAL: 2000,
-  JOB_LOGS_REFRESH_INTERVAL: 5000,
   TASK_REFRESH_INTERVAL: 2000,
   STORAGE_REFRESH_INTERVAL: 10000,
   ONGOING_UPLOAD_REFRESH_INTERVAL: 500,
@@ -42,16 +38,10 @@ export default {
   IDLE_DURATION: 120, // if the user does not move his mouse on the page during this duration, he is considered as inactive - no more ping (expressed in seconds)
   CONFIG_KEY_WELCOME: 'WELCOME',
   PREFIX_HIDDEN_PROPERTY_KEY: '@',
-  METADATA_PREFIXES: '',
   DEFAULT_PROPERTY_KEY: '@DEFAULT_PROPERTY',
   DEFAULT_IMAGE_CONTROLS_STEP: 2,
   CATEGORY_ITEMS_PER_BATCH: 10,
   ANNOTATIONS_MAX_ITEMS_PER_CATEGORY: 10,
   // To keep the WebSockets alive by sending the broadcaster viewer position
   WS_POSITION_KEEP_ALIVE_INTERVAL: 10000,
-  // ---
-  CYTOMINE_FLAVOR: null,
-  CYTOMINE_VERSION: null,
-  COMPONENTS: ['CORE', 'WEB_UI', 'NGINX', 'POSTGRES', 'MONGODB', 'BACKUP', 'PIMS', 'PIMS_CACHE',
-    'BIOFORMAT', 'HMS', 'SOFTWARE_ROUTER', 'RABBITMQ', 'SLURM', 'RETRIEVAL', 'IRIS']
 };

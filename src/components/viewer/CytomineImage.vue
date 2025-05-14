@@ -38,16 +38,17 @@
       />
 
       <vl-layer-tile :extent="extent" @mounted="addOverviewMap" ref="baseLayer">
-        <vl-source-zoomify
+        <vl-source-cytomine
           :projection="projectionName"
-          :urls="baseLayerURLs"
+          :url="baseLayerURL"
+          :tile-load-function="tileLoadFunction"
           :size="imageSize"
           :extent="extent"
-          :crossOrigin="slices[0].imageServerUrl"
+          :nb-resolutions="image.zoom"
           ref="baseSource"
           @mounted="setBaseSource()"
           :transition="0"
-          :tile-size="tileSize"
+          :tile-size="[tileSize, tileSize]"
         />
       </vl-layer-tile>
 
@@ -223,7 +224,7 @@ import {KeyboardPan, KeyboardZoom} from 'ol/interaction';
 import {noModifierKeys, targetNotEditable} from 'ol/events/condition';
 import WKT from 'ol/format/WKT';
 
-import {ImageConsultation, Annotation, AnnotationType, UserPosition, SliceInstance} from 'cytomine-client';
+import {Cytomine, ImageConsultation, Annotation, AnnotationType, UserPosition, SliceInstance} from 'cytomine-client';
 
 // import {constLib, operation} from '@/utils/color-manipulation.js';
 
@@ -281,6 +282,7 @@ export default {
     };
   },
   computed: {
+    shortTermToken: get('currentUser/shortTermToken'),
     document() {
       return document;
     },
@@ -396,8 +398,7 @@ export default {
     },
     baseLayerSliceParams() {
       return {
-        // eslint-disable-next-line camelcase
-        z_slices: this.slices[0].zStack,
+        zSlices: this.slices[0].zStack,
         timepoints: this.slices[0].time
       };
     },
@@ -408,34 +409,33 @@ export default {
       }
       return query;
     },
-    baseLayerURLs() {
+    baseLayerURL() {
       let slice = this.slices[0];
-      return  [`${slice.imageServerUrl}/image/${slice.path}/normalized-tile/zoom/{z}/ti/{tileIndex}.jpg${this.baseLayerURLQuery}`];
+      return Cytomine.instance.host + Cytomine.instance.basePath + `sliceinstance/${slice.id}/normalized-tile/zoom/{z}/tx/{x}/ty/{y}.jpg${this.baseLayerURLQuery}`;
     },
-    // colorManipulationOn() {
-    //   return this.imageWrapper.colors.brightness !== 0
-    //             || this.imageWrapper.colors.hue !== 0 || this.imageWrapper.colors.saturation !== 0;
-    // },
-    // operation() {
-    //   return operation;
-    // },
-    // lib() {
-    //   return {
-    //     ...constLib,
-    //     brightness: this.imageWrapper.colors.brightness,
-    //     contrast: this.imageWrapper.colors.contrast,
-    //     saturation: this.imageWrapper.colors.saturation,
-    //     hue: this.imageWrapper.colors.hue
-    //   };
-    // },
+    tileLoadFunction() {
+      return (tile, src) => {
+        const xhr = new XMLHttpRequest();
+        xhr.responseType = 'blob';
+        xhr.open('GET', src);
+        xhr.setRequestHeader('Authorization', 'Bearer ' + this.shortTermToken);
+        xhr.addEventListener('load', () => {
+          const url = URL.createObjectURL(xhr.response);
+          const tileImage = tile.getImage();
+          tileImage.addEventListener('load', () => URL.revokeObjectURL(url));
+          tileImage.src = url;
+        });
+        xhr.send();
+      };
+    },
 
     layersToPreload() {
       let layers = [];
       let annot = this.selectedAnnotation || this.routedAnnotation;
-      if(annot) {
-        layers.push(annot.type === AnnotationType.REVIEWED ? -1 : annot.user);
+      if (annot) {
+        layers.push(annot.type === AnnotationType.REVIEWED ? -1 : (annot.user ?? annot.annotationLayer));
       }
-      if(this.routedAction === 'review' && !layers.includes(-1)) {
+      if (this.routedAction === 'review' && !layers.includes(-1)) {
         layers.push(-1);
       }
       return layers;
@@ -601,7 +601,10 @@ export default {
       if (annot.image === this.image.id) {
         if (!annot.location) {
           //in case annotation location has not been loaded
-          annot = await Annotation.fetch(annot.id);
+          annot = (await Cytomine.instance.api.get(`/annotations/${annot.id}`)).data;
+          if (Object.prototype.hasOwnProperty.call(annot, 'annotationLayer')) {
+            annot.location = decodeURIComponent(atob(annot.location));
+          }
         }
 
         if (annot.project !== this.project.id) {
@@ -610,6 +613,10 @@ export default {
 
         let geometry = this.format.readGeometry(annot.location);
         await this.$refs.view.fit(geometry, {duration, padding: [10, 10, 10, 10], maxZoom: this.image.zoom});
+
+        if (!Object.prototype.hasOwnProperty.call(annot, 'centroid')) {
+          return;
+        }
 
         // HACK: center set by view.fit() is incorrect => reset it manually
         this.center = (geometry.getType() === 'Point') ? geometry.getFirstCoordinate()
@@ -765,7 +772,10 @@ export default {
       let idRoutedAnnot = this.$route.params.idAnnotation;
       if (idRoutedAnnot) {
         try {
-          annot = await Annotation.fetch(idRoutedAnnot);
+          annot = (await Cytomine.instance.api.get(`/annotations/${idRoutedAnnot}`)).data;
+          if (Object.prototype.hasOwnProperty.call(annot, 'annotationLayer')) {
+            annot.location = decodeURIComponent(atob(annot.location));
+          }
         }
         catch (error) {
           console.log(error);
@@ -775,14 +785,20 @@ export default {
     }
 
     if (annot) {
+      if (Object.prototype.hasOwnProperty.call(annot, 'annotationLayer')) {
+        let response = await Cytomine.instance.api.get(`/annotation-layers/${annot.annotationLayer}/task-run-layer`);
+        let taskRunLayer = response.data;
+        annot.image = taskRunLayer.image;
+      }
+
       try {
         if (annot.image === this.image.id) {
-          if (!this.sliceIds.includes(annot.slice)) {
+          if (!this.sliceIds.includes(annot.slice) && Object.prototype.hasOwnProperty.call(annot, 'slice')) {
             let slice = await SliceInstance.fetch(annot.slice);
             await this.$store.dispatch(this.imageModule + 'setActiveSlice', slice);
           }
           this.routedAnnotation = annot;
-          if(this.routedAction === 'comments') {
+          if (this.routedAction === 'comments') {
             this.$store.commit(this.imageModule + 'setShowComments', annot);
           }
           this.$store.commit(this.imageModule + 'setAnnotToSelect', annot);
@@ -810,14 +826,14 @@ export default {
     this.$eventBus.$on('updateMapSize', this.updateMapSize);
     this.$eventBus.$on('shortkeyEvent', this.shortkeyHandler);
     this.$eventBus.$on('selectAnnotation', this.selectAnnotationHandler);
-    this.$eventBus.$on('closeMetadata', () => this.$store.commit(this.imageModule + 'togglePanel', 'info'));
+    this.$eventBus.$on('close-metadata', () => this.$store.commit(this.imageModule + 'togglePanel', 'info'));
     this.setInitialZoom();
   },
   beforeDestroy() {
     this.$eventBus.$off('updateMapSize', this.updateMapSize);
     this.$eventBus.$off('shortkeyEvent', this.shortkeyHandler);
     this.$eventBus.$off('selectAnnotation', this.selectAnnotationHandler);
-    this.$eventBus.$off('closeMetadata');
+    this.$eventBus.$off('close-metadata');
     clearTimeout(this.timeoutSavePosition);
   }
 };

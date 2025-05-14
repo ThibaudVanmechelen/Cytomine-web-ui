@@ -4,14 +4,14 @@
       <button class="delete" @click="opened = false"></button>
 
       <div class="annotations-list-sidebar">
-        <b-field position="is-centered" v-if="hasTracks">
+        <!--<b-field position="is-centered" v-if="hasTracks">
           <b-radio-button v-model="displayType" native-value="TERM" size="is-small">
             {{$t('by-term')}}
           </b-radio-button>
           <b-radio-button v-model="displayType" native-value="TRACK" size="is-small">
             {{$t('by-track')}}
           </b-radio-button>
-        </b-field>
+        </b-field>-->
 
         <ontology-tree
           v-if="isDisplayedByTerm"
@@ -59,6 +59,7 @@
           :visible="opened"
           :index="index"
           :revision="revision"
+          :show-details="showDetails"
 
           @updateTermsOrTracks="$emit('updateTermsOrTracks', $event)"
           @updateProperties="$emit('updateProperties')"
@@ -74,15 +75,14 @@
 </template>
 
 <script>
-import {UserCollection, UserJobCollection} from 'cytomine-client';
-
-import OntologyTree from '@/components/ontology/OntologyTree';
-import TrackTree from '@/components/track/TrackTree';
-import ListAnnotationsBy from '@/components/annotations/ListAnnotationsBy';
+import {UserCollection} from 'cytomine-client';
 
 import {fullName} from '@/utils/user-utils.js';
 import {get} from '@/utils/store-helpers';
 
+import ListAnnotationsBy from '@/components/annotations/ListAnnotationsBy';
+import OntologyTree from '@/components/ontology/OntologyTree';
+import TrackTree from '@/components/track/TrackTree';
 
 export default {
   name: 'annotations-list',
@@ -96,20 +96,17 @@ export default {
   ],
   data() {
     return {
-      displayType: 'TERM',
       nbPerPage: 10,
-      selectedTermsIds: [],
-      selectedTracksIds: [],
       noTermOption: {id: 0, name: this.$t('no-term')},
 
       users: [],
-      userJobs: [],
 
       revision: 0
     };
   },
   computed: {
     ontology: get('currentProject/ontology'),
+    configUI: get('currentProject/configUI'),
 
     imageModule() {
       return this.$store.getters['currentProject/imageModule'](this.index);
@@ -124,9 +121,6 @@ export default {
       return this.imageWrapper.imageInstance;
     },
     images() {
-      if (this.imageWrapper.imageGroup) {
-        return [this.image, ...this.imageWrapper.imageGroup.imageInstances];
-      }
       return [this.image];
     },
     isActiveImage() {
@@ -205,7 +199,7 @@ export default {
       return this.layers.map(layer => layer.id);
     },
     allUsers() {
-      let allUsers = this.users.concat(this.userJobs);
+      let allUsers = this.users;
       allUsers.forEach(user => user.fullName = fullName(user));
       return allUsers;
     },
@@ -218,6 +212,37 @@ export default {
         this.$store.commit(this.imageModule + 'setShowAnnotationsList', value);
       }
     },
+
+    displayType: {
+      get() {
+        return this.imageWrapper.annotationsList.displayType;
+      },
+      set(value) {
+        this.$store.commit(this.imageModule + 'setDisplayType', value);
+      }
+    },
+
+    selectedTermsIds: {
+      get() {
+        return this.imageWrapper.annotationsList.selectedTermsIds;
+      },
+      set(value) {
+        this.$store.commit(this.imageModule + 'setSelectedTermsIds', value);
+      }
+    },
+
+    selectedTracksIds: {
+      get() {
+        return this.imageWrapper.annotationsList.selectedTracksIds;
+      },
+      set(value) {
+        this.$store.commit(this.imageModule + 'setSelectedTracksIds', value);
+      }
+    },
+
+    showDetails() {
+      return this.configUI['project-explore-annotation-main'];
+    }
   },
   watch: {
     hasTracks(value) {
@@ -229,12 +254,6 @@ export default {
   methods: {
     async fetchUsers() { // TODO in vuex (project module)
       this.users = (await UserCollection.fetchAll()).array;
-    },
-    async fetchUserJobs() { // TODO in vuex (project module)
-      this.userJobs = (await UserJobCollection.fetchAll({
-        filterKey: 'project',
-        filterValue: this.image.project
-      })).array;
     },
     addAnnotationHandler(annotation) {
       if(annotation.image === this.image.id) {
@@ -262,19 +281,6 @@ export default {
     select({annot, options}) {
       this.$emit('select', {annot, options: {trySameView: options.trySameView || this.isSameView(annot)}});
     },
-    // async select(annot) {
-    //   if (annot.slice !== this.slice.id) {
-    //     //TODO
-    //     await this.$store.dispatch(this.imageModule + 'setActiveSliceByPosition',
-    //       {time: annot.time, channel: annot.channel, zStack: annot.zStack});
-    //     this.$store.commit(this.imageModule + 'setAnnotToSelect', annot);
-    //     this.$eventBus.$emit('reloadAnnotations', {idImage: this.image.id, hard: true});
-    //     this.$emit('centerView', annot);
-    //   }
-    //   else {
-    //     this.$eventBus.$emit('selectAnnotation', {index: this.index, annot, center: true});
-    //   }
-    // },
 
     shortkeyHandler(key) {
       if (!this.isActiveImage) {
@@ -287,11 +293,14 @@ export default {
     }
   },
   async created() {
-    this.selectedTermsIds = (this.termsOptionsIds.length > 0) ? [this.termsOptionsIds[0]] : [];
-    this.selectedTracksIds = (this.hasTracks) ? [this.tracks[0].id] : [];
+    if (this.selectedTermsIds.length === 0) {
+      this.selectedTermsIds = (this.termsOptionsIds.length > 0) ? [this.termsOptionsIds[0]] : [];
+    }
+    if (this.selectedTracksIds.length === 0) {
+      this.selectedTracksIds = (this.hasTracks) ? [this.tracks[0].id] : [];
+    }
 
-    this.fetchUsers();
-    this.fetchUserJobs();
+    await this.fetchUsers();
   },
   mounted() {
     this.$eventBus.$on('addAnnotation', this.addAnnotationHandler);

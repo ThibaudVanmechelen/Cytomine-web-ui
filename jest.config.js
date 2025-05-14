@@ -4,7 +4,7 @@
  */
 
 /** @type {import('jest').Config} */
-const config = {
+module.exports = {
   // All imported modules in your tests should be mocked automatically
   // automock: false,
 
@@ -89,7 +89,7 @@ const config = {
   // ],
 
   // A map from regular expressions to module names or to arrays of module names that allow to stub out resources with a single module
-  moduleNameMapper: {'^@/(.*)$': '<rootDir>/src/$1'},
+  moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
 
   // An array of regexp pattern strings, matched against all module paths before considered 'visible' to the module loader
   // modulePathIgnorePatterns: [],
@@ -107,7 +107,17 @@ const config = {
   // projects: undefined,
 
   // Use this configuration option to add custom reporters to Jest
-  // reporters: undefined,
+  reporters: [
+    [
+      'jest-html-reporter',
+      {
+        outputPath: './reports/test-report.html',
+        pageTitle: 'Test Report',
+        includeFailureMsg: true,
+        includeConsoleLog: true,
+      },
+    ],
+  ],
 
   // Automatically reset mock state before every test
   // resetMocks: false,
@@ -155,7 +165,7 @@ const config = {
 
   // The glob patterns Jest uses to detect test files
   testMatch: [
-    '**/tests/units/**/*.js'
+    '**/tests/unit/**/*.js'
   ],
 
   // An array of regexp pattern strings that are matched against all test paths, matched tests are skipped
@@ -179,10 +189,11 @@ const config = {
   },
 
   // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
-  // transformIgnorePatterns: [
+  transformIgnorePatterns: [
+    '/node_modules/(?!(cytomine-client)/)'
   //   "/node_modules/",
   //   "\\.pnp\\.[^\\/]+$"
-  // ],
+  ],
 
   // An array of regexp pattern strings that are matched against all modules before the module loader will automatically return a mock for them
   // unmockedModulePathPatterns: undefined,
@@ -196,5 +207,3 @@ const config = {
   // Whether to use watchman for file crawling
   // watchman: true,
 };
-
-module.exports = config;

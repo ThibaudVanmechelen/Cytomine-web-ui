@@ -135,20 +135,6 @@ export default {
       .get('configuration.json')
       .then(response => (settings = response.data));
 
-    await axios
-      .get('meta-prefixes.json')
-      .then(response => {
-        constants.METADATA_PREFIXES = response.data;
-      });
-    
-    const PREFIXES = [
-      'APERIO', 'TIFF', 'HAMAMATSU', 'OPENSLIDE', 'EXIF', 'LEICA', 'JFIF', 'FILE',
-      'PNG', 'XMP', 'VENTANA', 'DICOM', 'ISYNTAX', 'VSI', 'MIRAX', 'ICC_PROFILE', 'MSMDAD'
-    ];
-    PREFIXES.forEach(prefix => {
-      this.$set(constants.METADATA_PREFIXES, prefix, prefix);
-    });
-
     for (let i in settings) {
       if (Object.prototype.hasOwnProperty.call(constants, i)
         || i.includes('_NAMESPACE') || i.includes('_VERSION') || i.includes('_ENABLED')) {
@@ -157,7 +143,7 @@ export default {
     }
     Object.freeze(constants);
 
-    new Cytomine(constants.CYTOMINE_CORE_HOST);
+    new Cytomine(window.location.origin);
 
     if(this.$route.query.token && this.$route.query.username) {
       await this.loginWithToken();

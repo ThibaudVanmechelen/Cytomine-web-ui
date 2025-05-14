@@ -155,14 +155,7 @@
       <tr v-if="isPropDisplayed('properties')">
         <td colspan="2">
           <h5>{{$t('properties')}}</h5>
-          <cytomine-properties
-            :object="annotation"
-            :canEdit="canEdit"
-            :properties="internalUseFilteredProperties"
-            @deleted="removeProp"
-            @added="addProp"
-            @updateProperties="$emit('updateProperties')"
-             />
+          <cytomine-properties :object="annotation" :canEdit="canEdit" @update="$emit('updateProperties')" />
         </td>
       </tr>
 
@@ -187,17 +180,6 @@
                   :images="images"
                   @select="$emit('select', $event)"
               />
-          </td>
-        </tr>
-      </template>
-
-      <template>
-        <tr>
-          <td colspan="2">
-            <h5>{{ $t('similar-annotations') }}</h5>
-            <button class="button is-small is-fullwidth" @click="$emit('searchSimilarAnnotations')">
-              {{ $t('search-similar-annotation') }}
-            </button>
           </td>
         </tr>
       </template>
@@ -299,7 +281,7 @@
 <script>
 import {get} from '@/utils/store-helpers';
 
-import {AnnotationTerm, AnnotationType, AnnotationCommentCollection, AnnotationTrack} from 'cytomine-client';
+import {AnnotationTerm, AnnotationType, AnnotationCommentCollection, AnnotationTrack, PropertyCollection} from 'cytomine-client';
 import copyToClipboard from 'copy-to-clipboard';
 import ImageName from '@/components/image/ImageName';
 import CytomineDescription from '@/components/description/CytomineDescription';
@@ -315,7 +297,6 @@ import ProfileModal from '@/components/viewer/ProfileModal';
 import AnnotationLinksPreview from '@/components/annotations/AnnotationLinksPreview';
 import {appendShortTermToken} from '@/utils/token-utils.js';
 import ChannelName from '@/components/viewer/ChannelName';
-import {PropertyCollection} from 'cytomine-client';
 import constants from '@/utils/constants.js';
 
 export default {
@@ -634,7 +615,7 @@ export default {
     }
   },
   async created() {
-    if(this.isPropDisplayed('comments') && [AnnotationType.ALGO, AnnotationType.USER].includes(this.annotation.type)) {
+    if(this.isPropDisplayed('comments') && this.annotation.type == AnnotationType.USER) {
       try {
         this.comments = (await AnnotationCommentCollection.fetchAll({annotation: this.annotation})).array;
         if(this.showComments) {
@@ -654,12 +635,7 @@ export default {
       this.loadPropertiesError = true;
       console.log(error);
     }
-
-    this.$eventBus.$emit('hide-similar-annotations');
   },
-  destroyed() {
-    this.$eventBus.$emit('hide-similar-annotations');
-  }
 };
 </script>
 

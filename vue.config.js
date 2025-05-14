@@ -1,6 +1,7 @@
 module.exports = {
   devServer: {
-    // domain whitelist for dev server
-    allowedHosts: ['.cytomine.local']
+    client: {
+      webSocketURL: 'ws://127.0.0.1/dev-ws',
+    },
   }
 };

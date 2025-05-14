@@ -37,6 +37,7 @@
 
       <div class="annotation-details-container">
         <annotation-details
+          v-if="selectedFeature.properties.annot.hasOwnProperty('user')"
           :annotation="selectedFeature.properties.annot"
           :terms="terms"
           :images="images"
@@ -56,7 +57,12 @@
           @select="$emit('select', $event)"
           @centerView="$emit('centerView', ($event) ? $event : annot)"
           @deletion="$emit('delete', annot)"
-          @searchSimilarAnnotations="searchSimilarAnnotations"
+        />
+
+        <annotation-simple-details
+          v-else
+          :annotation="selectedFeature.properties.annot"
+          @centerView="$emit('centerView', ($event) ? $event : annot)"
         />
       </div>
 
@@ -77,15 +83,20 @@
 
 <script>
 import VueDraggableResizable from 'vue-draggable-resizable';
-
-import AnnotationDetails from '@/components/annotations/AnnotationDetails';
-import {Cytomine, UserCollection, UserJobCollection} from 'cytomine-client';
+import {UserCollection} from 'cytomine-client';
 import {fullName} from '@/utils/user-utils.js';
+import AnnotationDetails from '@/components/annotations/AnnotationDetails';
 import AnnotationLinksPreview from '@/components/annotations/AnnotationLinksPreview';
+import AnnotationSimpleDetails from '@/components/viewer/annotations/AnnotationSimpleDetails';
 
 export default {
   name: 'annotations-details-container',
-  components: {AnnotationLinksPreview, VueDraggableResizable, AnnotationDetails},
+  components: {
+    AnnotationDetails,
+    AnnotationLinksPreview,
+    AnnotationSimpleDetails,
+    VueDraggableResizable,
+  },
   props: {
     index: String,
   },
@@ -93,7 +104,6 @@ export default {
     return {
       width: 320,
       projectUsers: [],
-      userJobs: [],
       reload: true,
       showComments: false
     };
@@ -146,7 +156,7 @@ export default {
       return this.$store.getters[this.imageModule + 'selectedFeature'];
     },
     allUsers() {
-      let allUsers = this.projectUsers.concat(this.userJobs);
+      let allUsers = this.projectUsers;
       allUsers.forEach(user => user.fullName = fullName(user));
       return allUsers;
     },
@@ -181,12 +191,6 @@ export default {
 
       this.projectUsers = (await collection.fetchAll()).array;
     },
-    async fetchUserJobs() {
-      this.userJobs = (await UserJobCollection.fetchAll({
-        filterKey: 'project',
-        filterValue: this.image.project
-      })).array;
-    },
 
     dragStop(x, y) {
       this.positionAnnotDetails = {x, y};
@@ -212,25 +216,9 @@ export default {
         this.$nextTick(() => this.reload = true);
       }
     },
-    async searchSimilarAnnotations() {
-      let data = (await Cytomine.instance.api.get(
-        'retrieval/search',
-        {
-          params: {
-            annotation: this.selectedFeature.properties.annot.id,
-            nrt_neigh: 10 // eslint-disable-line camelcase
-          }
-        }
-      )).data;
-
-      this.$store.commit(this.imageModule + 'setShowSimilarAnnotations', true);
-      this.$store.commit(this.imageModule + 'setSimilarAnnotations', data);
-      this.$store.commit(this.imageModule + 'setQueryAnnotation', this.selectedFeature.properties.annot);
-    }
   },
   created() {
     this.fetchUsers();
-    this.fetchUserJobs();
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);

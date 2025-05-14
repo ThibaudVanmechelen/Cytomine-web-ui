@@ -51,21 +51,102 @@
         </button>
       </div>
 
-      <metadata-search
-        v-if="filtersOpened"
-        :formats="availableFormats"
-        :image-ids="imageIds"
-        :magnifications="availableMagnifications"
-        :max-height="maxHeight"
-        :max-width="maxWidth"
-        :max-nb-job-annotations="maxNbJobAnnotations"
-        :max-nb-reviewed-annotations="maxNbReviewedAnnotations"
-        :max-nb-user-annotations="maxNbUserAnnotations"
-        :metadata="metadata"
-        :resolutions="availableResolutions"
-        :tags="availableTags"
-        :vendors="availableVendors"
-      />
+      <b-collapse :open="filtersOpened">
+        <div class="filters">
+          <div class="columns">
+            <div class="column filter is-one-quarter">
+              <div class="filter-label">
+                {{$t('format')}}
+              </div>
+              <div class="filter-body">
+                <cytomine-multiselect v-model="selectedFormats" :options="availableFormats" multiple />
+              </div>
+            </div>
+
+            <div class="column filter is-one-quarter">
+              <div class="filter-label">
+                {{$t('vendor')}}
+              </div>
+              <div class="filter-body">
+                <cytomine-multiselect v-model="selectedVendors" :options="availableVendors"
+                    :multiple="true" label="label" track-by="value"/>
+              </div>
+            </div>
+
+            <div class="column filter is-one-quarter">
+              <div class="filter-label">
+                {{$t('tags')}}
+              </div>
+              <div class="filter-body">
+                <cytomine-multiselect v-model="selectedTags" :options="availableTags"
+                  label="name" track-by="id" :multiple="true" :allPlaceholder="$t('all')" />
+              </div>
+            </div>
+          </div>
+
+          <div class="columns">
+            <div class="column filter">
+              <div class="filter-label">
+                {{$t('magnification')}}
+              </div>
+              <div class="filter-body">
+                <cytomine-multiselect v-model="selectedMagnifications" :options="availableMagnifications"
+                    :multiple="true" :searchable="false" label="label" track-by="value"/>
+              </div>
+            </div>
+
+            <div class="column filter">
+              <div class="filter-label">
+                {{$t('resolution')}}
+              </div>
+              <div class="filter-body">
+                <cytomine-multiselect v-model="selectedResolutions" :options="availableResolutions"
+                    :multiple="true" :searchable="false" label="label" track-by="value" />
+              </div>
+            </div>
+
+            <div class="column">
+              <div class="filter-label">
+                {{$t('width')}}
+              </div>
+              <div class="filter-body">
+                <cytomine-slider v-model="boundsWidth" :max="maxWidth" />
+              </div>
+            </div>
+
+            <div class="column">
+              <div class="filter-label">
+                {{$t('height')}}
+              </div>
+              <div class="filter-body">
+                <cytomine-slider v-model="boundsHeight" :max="maxHeight" />
+              </div>
+            </div>
+          </div>
+
+          <div class="columns">
+            <div class="column filter">
+              <div class="filter-label">
+                {{$t('user-annotations')}}
+              </div>
+              <div class="filter-body">
+                <cytomine-slider v-model="boundsUserAnnotations" :max="maxNbUserAnnotations" />
+              </div>
+            </div>
+
+            <div class="column filter">
+              <div class="filter-label">
+                {{$t('reviewed-annotations')}}
+              </div>
+              <div class="filter-body">
+                <cytomine-slider v-model="boundsReviewedAnnotations" :max="maxNbReviewedAnnotations" />
+              </div>
+            </div>
+
+            <div class="column filter"></div>
+          </div>
+        </div>
+      </b-collapse>
 
       <cytomine-table
         :collection="imageCollection"
@@ -102,12 +183,6 @@
           <b-table-column field="numberOfAnnotations" :label="$t('user-annotations')" centered sortable width="100">
             <router-link :to="`/project/${image.project}/annotations?image=${image.id}&type=user`">
               {{ image.numberOfAnnotations }}
-            </router-link>
-          </b-table-column>
-
-          <b-table-column field="numberOfJobAnnotations" :label="$t('analysis-annotations')" centered sortable width="100">
-            <router-link :to="`/project/${image.project}/annotations?image=${image.id}&type=algo`">
-              {{ image.numberOfJobAnnotations }}
             </router-link>
           </b-table-column>
 
@@ -149,16 +224,17 @@
 </template>
 
 <script>
-import {get, sync, syncMultiselectFilter, syncBoundsFilter} from '@/utils/store-helpers';
+import {ImageInstanceCollection, TagCollection} from 'cytomine-client';
 
-import CytomineTable from '@/components/utils/CytomineTable';
-import MetadataSearch from '@/components/search/MetadataSearch';
-import ImageName from './ImageName';
-import ImageDetails from './ImageDetails';
-import AddImageModal from './AddImageModal';
+import {get, sync, syncMultiselectFilter, syncBoundsFilter} from '@/utils/store-helpers';
 import vendorFromFormat from '@/utils/vendor';
 
-import {ImageInstanceCollection, PropertyCollection, TagCollection} from 'cytomine-client';
+import AddImageModal from '@/components/image/AddImageModal';
+import CytomineMultiselect from '@/components/form/CytomineMultiselect';
+import CytomineSlider from '@/components/form/CytomineSlider';
+import CytomineTable from '@/components/utils/CytomineTable';
+import ImageDetails from '@/components/image/ImageDetails';
+import ImageName from '@/components/image/ImageName';
 import ImageThumbnail from '@/components/image/ImageThumbnail';
 
 // store options to use with store helpers to target projects/currentProject/listImages module
@@ -170,27 +246,25 @@ const localSyncBoundsFilter = (filterName, maxProp) => syncBoundsFilter(null, fi
 export default {
   name: 'list-images',
   components: {
-    ImageThumbnail,
-    ImageName,
-    ImageDetails,
-    CytomineTable,
     AddImageModal,
-    MetadataSearch,
+    CytomineMultiselect,
+    CytomineSlider,
+    CytomineTable,
+    ImageDetails,
+    ImageName,
+    ImageThumbnail
   },
   data() {
     return {
       loading: true,
       error: false,
       images: [],
-      metadata: {},
-      filteredImageIDs: [],
       addImageModal: false,
       excludedProperties: [
         'overview',
         'instanceFilename',
         'magnification',
         'numberOfAnnotations',
-        'numberOfJobAnnotations',
         'numberOfReviewedAnnotations',
         'size'
       ],
@@ -202,7 +276,6 @@ export default {
       maxWidth: 100,
       maxHeight: 100,
       maxNbUserAnnotations: 100,
-      maxNbJobAnnotations: 100,
       maxNbReviewedAnnotations: 100,
       revision: 0
     };
@@ -240,7 +313,6 @@ export default {
     boundsWidth: localSyncBoundsFilter('boundsWidth', 'maxWidth'),
     boundsHeight: localSyncBoundsFilter('boundsHeight', 'maxHeight'),
     boundsUserAnnotations: localSyncBoundsFilter('boundsUserAnnotations', 'maxNbUserAnnotations'),
-    boundsJobAnnotations: localSyncBoundsFilter('boundsJobAnnotations', 'maxNbJobAnnotations'),
     boundsReviewedAnnotations: localSyncBoundsFilter('boundsReviewedAnnotations', 'maxNbReviewedAnnotations'),
 
     multiSelectFilters() {
@@ -265,7 +337,6 @@ export default {
         {prop: 'width', bounds: this.boundsWidth, max: this.maxWidth},
         {prop: 'height', bounds: this.boundsHeight, max: this.maxHeight},
         {prop: 'numberOfAnnotations', bounds: this.boundsUserAnnotations, max: this.maxNbUserAnnotations},
-        {prop: 'numberOfJobAnnotations', bounds: this.boundsJobAnnotations, max: this.maxNbJobAnnotations},
         {prop: 'numberOfReviewedAnnotations', bounds: this.boundsReviewedAnnotations, max: this.maxNbReviewedAnnotations},
       ];
     },
@@ -300,29 +371,7 @@ export default {
         }
       }
 
-      let filteredIDs = [];
-      this.selectedFormats.forEach(format => filteredIDs = filteredIDs.concat(this.filteredImageIDs[format]));
-      if (filteredIDs.length === 0) {
-        for (let ids of Object.values(this.filteredImageIDs)) {
-          filteredIDs = filteredIDs.concat(ids);
-        }
-      }
-
-      if (filteredIDs.length > 0) {
-        collection['include'] = {
-          in: filteredIDs.join(',')
-        };
-      }
-
       return collection;
-    },
-
-    imageIds() {
-      let ids = {};
-      this.availableFormats.forEach(format => ids[format] = []);
-      this.images.forEach(image => ids[image.contentType].push(image.baseImage));
-
-      return ids;
     },
 
     nbActiveFilters() {
@@ -334,6 +383,7 @@ export default {
 
     currentPage: sync('currentPage', storeOptions),
     perPage: sync('perPage', storeOptions),
+    // getting the sortFIeld from the Vuex store to check if it's null (defualt) so we set it to sort by filename
     sortField: sync('sortField', storeOptions),
     sortOrder: sync('sortOrder', storeOptions),
     openedDetails: sync('openedDetails', storeOptions)
@@ -344,7 +394,6 @@ export default {
       this.maxWidth = Math.max(100, stats.width.max);
       this.maxHeight = Math.max(100, stats.height.max);
       this.maxNbUserAnnotations = Math.max(100, stats.countImageAnnotations.max);
-      this.maxNbJobAnnotations = Math.max(100, stats.countImageJobAnnotations.max);
       this.maxNbReviewedAnnotations = Math.max(100, stats.countImageReviewedAnnotations.max);
 
 
@@ -360,8 +409,6 @@ export default {
         if (!this.availableVendors.find(vendor => vendor.value === vendorFormatted.value)) {
           this.availableVendors.push(vendorFormatted);
         }
-
-        this.filteredImageIDs[format] = [];
       });
 
       this.availableMagnifications = stats.magnification.list.map(m => {
@@ -380,28 +427,8 @@ export default {
     async fetchTags() {
       this.availableTags = [{id: 'null', name: this.$t('no-tag')}, ...(await TagCollection.fetchAll()).array];
     },
-    async fetchImages() {
-      this.images = (await ImageInstanceCollection.fetchAll({
-        filterKey: 'project',
-        filterValue: this.project.id,
-      })).array;
-
-      await Promise.all(this.images.map(async (image) => {
-        let properties = (await PropertyCollection.fetchAll({object: image})).array;
-        properties.sort((a, b) => a.key.localeCompare(b.key));
-
-        if (!(image.contentType in this.metadata)) {
-          this.metadata[image.contentType] = {};
-        }
-
-        this.metadata[image.contentType][image.id] = properties;
-        this.filteredImageIDs[image.contentType].push(image.baseImage);
-      }));
-    },
 
     async refreshData() {
-      this.$store.commit('currentProject/resetMetadataFilters');
-
       try {
         await Promise.all([
           this.fetchFilters(),
@@ -420,10 +447,6 @@ export default {
     isPropDisplayed(prop) {
       return this.excludedProperties.includes(prop) && (this.configUI[`project-explore-image-${prop}`] == null || this.configUI[`project-explore-image-${prop}`]);
     },
-    includeImageIDs(format, imageIDs) {
-      this.$delete(this.filteredImageIDs, format);
-      this.$set(this.filteredImageIDs, format, imageIDs);
-    }
   },
   watch: {
     querySearchTags(values) {
@@ -441,9 +464,21 @@ export default {
       await Promise.all([
         this.fetchFilters(),
         this.fetchTags(),
-        this.fetchImages(),
       ]);
       this.loading = false;
+
+      // Check if sortField is null in Vuex and set it to 'instanceFilename' if it is
+      if (this.sortField === null) {
+
+        if (this.blindMode) {
+          // set sortField to blindedName if blindMode is used
+          this.sortField = 'blindedName';
+        }
+        else {
+          // Use your default sorting by file name ('instanceFilename')
+          this.sortField = 'instanceFilename';
+        }
+      }
     }
     catch(error) {
       console.log(error);
@@ -456,12 +491,6 @@ export default {
       }
     }
   },
-  mounted() {
-    this.$eventBus.$on('includeImageIDs', this.includeImageIDs);
-  },
-  beforeDestroy() {
-    this.$eventBus.$off('includeImageIDs', this.includeImageIDs);
-  }
 };
 </script>
 

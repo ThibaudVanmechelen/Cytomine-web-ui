@@ -14,8 +14,6 @@
 * limitations under the License.
 */
 
-import Vue from 'vue';
-
 import {Cytomine, Project, ProjectConnection, Ontology, AnnotationType, UserCollection, ProjectMemberRole} from 'cytomine-client';
 
 import {fullName} from '@/utils/user-utils.js';
@@ -29,7 +27,6 @@ function getDefaultState() {
     managers: [],
     members: [],
     currentViewer: null,
-    currentMetadataSearch: {},
   };
 }
 
@@ -66,22 +63,6 @@ export default {
     setCurrentViewer(state, id) {
       state.currentViewer = id;
     },
-
-    setImageFormat(state, format) {
-      state.currentMetadataSearch[format] = {};
-    },
-
-    setCurrentMetadataSearch(state, {format, key, searchValue}) {
-      state.currentMetadataSearch[format][key] = searchValue;
-    },
-
-    removeMetadataFilter(state, {format, key}) {
-      Vue.delete(state.currentMetadataSearch[format], key);
-    },
-
-    resetMetadataFilters(state) {
-      state.currentMetadataSearch = {};
-    }
   },
 
   actions: {
@@ -157,9 +138,6 @@ export default {
     },
 
     canEditAnnot: (_, getters, rootState) => annot => {
-      if (annot.type === AnnotationType.ALGO) {
-        return false;
-      }
       let currentUser = rootState.currentUser.user;
       let idLayer = annot.user;
       if(annot.type === AnnotationType.REVIEWED) {
@@ -175,13 +153,6 @@ export default {
         (!currentUser.guestByNow && !project.isReadOnly && (image.user === currentUser.id || !project.isRestricted));
     },
 
-    canManageJob: (state, getters, rootState) => job => {
-      let currentUser = rootState.currentUser.user;
-      let project = state.project;
-      return getters.canManageProject ||
-        (!currentUser.guestByNow && !project.isReadOnly && (job.username === currentUser.username || !project.isRestricted));
-    },
-
     canManageProject: (state, _, rootState) => { // true iff current user is admin or project manager
       let currentUser = rootState.currentUser.user || {};
       return currentUser.adminByNow || (!currentUser.guestByNow && state.managers.some(user => user.id === currentUser.id));
@@ -194,10 +165,6 @@ export default {
 
     terms: (state) => {
       return state.ontology ? getAllTerms(state.ontology) : null;
-    },
-
-    currentMetadataSearch: (state) => {
-      return state.currentMetadataSearch;
     },
 
     currentProjectModule: (state) => {
