@@ -249,7 +249,7 @@
       {{ $t('button-center-view-on-annot') }}
     </a>
 
-    <button v-if="!isPoint" class="button is-link is-small is-fullwidth"
+    <button v-if="!isPoint" class="button is-link is-small is-fullwidth refine-sam-button"
       @click="sendSamRequest"
     >
         {{ $t('button-sam-request') }}
@@ -298,6 +298,8 @@ import AnnotationLinksPreview from '@/components/annotations/AnnotationLinksPrev
 import {appendShortTermToken} from '@/utils/token-utils.js';
 import ChannelName from '@/components/viewer/ChannelName';
 import constants from '@/utils/constants.js';
+
+import {Cytomine} from 'cytomine-client';
 
 export default {
   name: 'annotations-details',
@@ -597,14 +599,7 @@ export default {
     async sendSamRequest() {
       try {
         const annotationId = this.annotation.id;
-
-        // full path should be https://research.cytomine.be/api/annotation/{annotationId}/sam
-        const response = await fetch(`/api/annotation/${annotationId}/sam`, { method: "POST" });
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.message || 'SAM request failed');
-        }
+        const response = await Cytomine.instance.api.post(`annotation/${annotationId}/sam`);
 
         this.$notify({ type: 'success', text: 'Successful SAM Processing !' });
 
@@ -690,6 +685,10 @@ a.is-fullwidth {
   box-shadow: 0 2px 3px rgba(10, 10, 10, 0.1), 0 0 0 1px rgba(10, 10, 10, 0.1);
   border-radius: 4px;
   margin-top: 4px;
+}
+
+.refine-sam-button {
+  max-width: 98%;
 }
 
 /**

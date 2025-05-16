@@ -102,6 +102,7 @@ button-best-fit-zoom,Fit zoom to viewport,Ajuster le zoom à la vue,,Pas zoom aa
 button-cancel-review,Cancel my review,Annuler la validation,Cancelar mi reseña,Review annuleren
 button-cancel,Cancel,Annuler,Cancelar,Annuleren
 button-center-view-on-annot,Center view on this annotation,Cadrer sur cette annotation,Cnetrar vista en anotación,Kader de view op deze annotatie
+button-sam-request,Refine with SAM,Affiner avec SAM,Refinar con SAM,Verfijnen met SAM
 button-change-ontology,Change ontology,Changer l'ontologie,Cambiar ontología,Knop om de ontologie te veranderen
 button-clear,Clear,Réinitialiser,Reiniciar,Resetten
 button-close,Close,Fermer,Cerrar,Sluiten
