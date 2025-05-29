@@ -249,7 +249,7 @@
       {{ $t('button-center-view-on-annot') }}
     </a>
 
-    <button v-if="!isPoint" class="button is-link is-small is-fullwidth refine-sam-button"
+    <button v-if="!isPoint && !isLineString" class="button is-link is-small is-fullwidth refine-sam-button"
       @click="sendSamRequest"
     >
         {{ $t('button-sam-request') }}
@@ -423,6 +423,9 @@ export default {
     },
     isPoint() {
       return this.annotation.location && this.annotation.location.includes('POINT');
+    },
+    isLineString() {
+      return this.annotation.location && this.annotation.location.includes('LINESTRING');
     },
     internalUseFilteredProperties() {
       return this.properties.filter(prop => !prop.key.startsWith(constants.PREFIX_HIDDEN_PROPERTY_KEY));
